@@ -22,17 +22,14 @@
         dest: /home/gadet/
         remote_src: yes
 
-    - name: Set Maven options for build
-      lineinfile:
-        path: /etc/environment
-        line: 'MAVEN_OPTS="-Xms2g -Xmx2g"'
-        create: yes
 
     - name: Build Apache Atlas
       command:
         cmd: mvn clean -DskipTests package -Pdist,embedded-hbase-solr
       args:
         chdir: /home/gadet/apache-atlas-sources-2.4.0/
+      environment:
+        MAVEN_OPTS: "-Xms2g -Xmx2g"
 
     - name: Extract Apache Atlas server
       ansible.builtin.unarchive:
