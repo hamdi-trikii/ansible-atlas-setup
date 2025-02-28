@@ -21,7 +21,11 @@
         src: /home/gadet/apache-atlas-2.4.0-sources.tar.gz
         dest: /home/gadet/
         remote_src: yes
+    - name: Change ownership of Apache Atlas files
+      command: chown -R gadet:gadet /home/gadet/apache-atlas-sources-2.4.0/
 
+    - name: Ensure Apache Atlas build directory is accessible
+      command: chmod -R u+rwX /home/gadet/apache-atlas-sources-2.4.0/
 
     - name: Build Apache Atlas
       command:
