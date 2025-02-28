@@ -215,7 +215,7 @@
         executable: /bin/bash
 
 
-- name: Copy atlas-application.properties to Sqoop configuration
+    - name: Copy atlas-application.properties to Sqoop configuration
       copy:
         src: files/atlas-application.properties
         dest: /opt/sqoop-1.4.7.bin__hadoop-2.6.0/conf/atlas-application.properties
