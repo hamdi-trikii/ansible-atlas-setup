@@ -32,7 +32,7 @@
       command:
         cmd: mvn clean -DskipTests package -Pdist,embedded-hbase-solr
       args:
-        chdir: /home/gadet/apache-atlas-2.4.0/
+        chdir: /home/gadet/apache-atlas-sources-2.4.0/
 
     - name: Extract Apache Atlas server
       ansible.builtin.unarchive:
