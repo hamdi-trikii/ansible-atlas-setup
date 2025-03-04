@@ -1,4 +1,4 @@
-<h1 align="left">Apache Atlas Installation with Ansible</h1>
+<h1 align="left">1.Apache Atlas Installation with Ansible</h1>
 
 ###
 
@@ -15,7 +15,7 @@
 ###
 
 
-<h1 align="left">Hive Integration with Apache Atlas - Ansible Playbook</h1>
+<h1 align="left">2.Hive Integration with Apache Atlas - Ansible Playbook</h1>
 
 ###
 
