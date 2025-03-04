@@ -52,11 +52,6 @@
       environment:
         MAVEN_OPTS: "-Xms2g -Xmx2g"
 
-    - name: Debug Maven build output
-      ansible.builtin.debug:
-        msg: "Maven output: {{ build_result.stderr }}"
-      when: build_result.rc != 0
-
 
     - name: Extract Apache Atlas server tarball to /opt/
       ansible.builtin.unarchive:
