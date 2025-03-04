@@ -1,63 +1,100 @@
+
+
 ---
 - name: Install and Configure Apache Atlas
-  hosts: all
-  become: yes
+  hosts: localhost
+  vars:
+    ansible_connection: local
+    ansible_user: gadet
+    atlas_install_dir: /home/gadet/atlas
   tasks:
-    - name: Ensure required packages are installed
-      apt:
-        name:
-          - wget
-          - maven
-        state: present
-        update_cache: yes
-
     - name: Download Apache Atlas source
-      get_url:
+      ansible.builtin.get_url:
         url: https://dlcdn.apache.org/atlas/2.4.0/apache-atlas-2.4.0-sources.tar.gz
         dest: /home/gadet/apache-atlas-2.4.0-sources.tar.gz
+        owner: gadet
+        group: gadet
+        mode: '0644'
 
     - name: Extract Apache Atlas source
       ansible.builtin.unarchive:
         src: /home/gadet/apache-atlas-2.4.0-sources.tar.gz
         dest: /home/gadet/
         remote_src: yes
-    - name: Change ownership of Apache Atlas files
-      command: chown -R gadet:gadet /home/gadet/apache-atlas-sources-2.4.0/
+        owner: gadet
+        group: gadet
+        mode: '0755'
 
-    - name: Ensure Apache Atlas build directory is accessible
-      command: chmod -R u+rwX /home/gadet/apache-atlas-sources-2.4.0/
+    - name: Install Maven
+      ansible.builtin.apt:
+        name: maven
+        state: present
+        update_cache: yes
+      become: yes
+      become_user: root
 
-    - name: Build Apache Atlas
-      command:
+
+    - name: Ensure Atlas source directory is writable
+      ansible.builtin.file:
+        path: /home/gadet/apache-atlas-sources-2.4.0/
+        owner: gadet
+        group: gadet
+        mode: 'u+rwx'
+        recurse: yes
+      become: yes
+      become_user: root
+
+
+    - name: Build Apache Atlas with Maven
+      ansible.builtin.command:
         cmd: mvn clean -DskipTests package -Pdist,embedded-hbase-solr
-      args:
         chdir: /home/gadet/apache-atlas-sources-2.4.0/
       environment:
         MAVEN_OPTS: "-Xms2g -Xmx2g"
 
-    - name: Extract Apache Atlas server
+    - name: Debug Maven build output
+      ansible.builtin.debug:
+        msg: "Maven output: {{ build_result.stderr }}"
+      when: build_result.rc != 0
+
+
+    - name: Extract Apache Atlas server tarball to /opt/
       ansible.builtin.unarchive:
-        src: /home/gadet/apache-atlas-2.4.0/distro/target/apache-atlas-2.4.0-server.tar.gz
+        src: /home/gadet/apache-atlas-sources-2.4.0/distro/target/apache-atlas-2.4.0-server.tar.gz
         dest: /opt/
         remote_src: yes
+        owner: gadet
+        group: gadet
+        mode: '0775'
+      become: yes
+      become_user: root
 
-#final atlas-application.properties
+    - name: Ensure Apache Atlas directory has correct ownership and permissions
+      ansible.builtin.file:
+        path: /opt/apache-atlas-2.4.0/
+        owner: gadet
+        group: gadet
+        mode: '0775'
+        recurse: yes
+      become: yes
+      become_user: root
+
+
     - name: Copy custom atlas-application.properties
-      copy:
+      ansible.builtin.copy:
         src: files/atlas-application.properties
         dest: /opt/apache-atlas-2.4.0/conf/atlas-application.properties
-        owner: root
-        group: root
+        owner: gadet
+        group: gadet
         mode: '0644'
 
-#HBASE conf 
-
-
-    - name: Copy hbase-site.xml to Atlas configuration
-      copy:
+    - name: Copy hbase-site.xml to Atlas conf/hbase directory
+      ansible.builtin.copy:
         src: /opt/hbase-2.5.5-hadoop3/conf/hbase-site.xml
-        dest: /opt/apache-atlas-2.4.0/conf/hbase-site.xml
-        remote_src: yes
+        dest: /opt/apache-atlas-2.4.0/conf/hbase/hbase-site.xml
+        owner: gadet
+        group: gadet
+        mode: '0644'
 
     - name: Update atlas-env.sh settings
       lineinfile:
@@ -82,274 +119,3 @@
         path: /opt/apache-atlas-2.4.0/conf/atlas-env.sh
         regexp: '^export MANAGE_LOCAL_ELASTICSEARCH='
         line: 'export MANAGE_LOCAL_ELASTICSEARCH=false'
-
-
-
-# hive conf
-
-    - name: Update hive-site.xml to disable security authorization
-      lineinfile:
-        path: /opt/apache-hive-3.1.2-bin/conf/hive-site.xml
-        regexp: '<name>hive.security.authorization.enabled</name>\s*<value>true</value>'
-        line: '    <name>hive.security.authorization.enabled</name>\n    <value>false</value>'
-
-
-    - name: Extract Apache Atlas Hive Hook
-      ansible.builtin.unarchive:
-        src: /home/gadet/apache-atlas-2.4.0/distro/target/apache-atlas-2.4.0-hive-hook.tar.gz
-        dest: /home/gadet/apache-atlas-2.4.0/distro/target/
-        remote_src: yes
-
-    - name: Create Hive Hook directories
-      file:
-        path: /opt/apache-atlas-2.4.0/hook/hive
-        state: directory
-        owner: root
-        group: root
-        mode: '0755'
-        recurse: yes
-
-    - name: Copy Hive Hook files
-      copy:
-        src: /home/gadet/apache-atlas-2.4.0/distro/target/apache-atlas-2.4.0-hive-hook/apache-atlas-hive-hook-2.4.0/hook/hive/
-        dest: /opt/apache-atlas-2.4.0/hook/hive/
-        remote_src: yes
-        owner: root
-        group: root
-        mode: '0755'
-
-
-    - name: Add Hive Hook property to hive-site.xml
-      blockinfile:
-        path: /opt/apache-hive-3.1.2-bin/conf/hive-site.xml
-        marker: "<!-- Ansible Managed Block: Hive Hook -->"
-        block: |
-          <property>
-              <name>hive.exec.post.hooks</name>
-              <value>org.apache.atlas.hive.hook.HiveHook</value>
-          </property>
-
-
-    - name: Add HIVE_AUX_JARS_PATH to hive-env.sh
-      lineinfile:
-        path: /opt/apache-hive-3.1.2-bin/conf/hive-env.sh
-        line: 'export HIVE_AUX_JARS_PATH=/opt/apache-atlas-2.4.0/hook/hive'
-        create: yes
-
-    - name: Copy atlas-application.properties to Hive conf directory
-      copy:
-        src: /opt/apache-atlas-2.4.0/conf/atlas-application.properties
-        dest: /opt/apache-hive-3.1.2-bin/conf/atlas-application.properties
-        owner: root
-        group: root
-        mode: '0644'
-
-
-
-# now the hive hook shall work smoothly 
-# but we need to configure import-hive.sh in order to import old tables if exists
-
-
-    - name: Create hook-bin directory
-      file:
-        path: /opt/apache-atlas-2.4.0/hook-bin/
-        state: directory
-        owner: root
-        group: root
-        mode: '0755'
-
-    - name: Download log4j-1.2.17.jar
-      get_url:
-        url: http://archive.apache.org/dist/logging/log4j/1.2.17/log4j-1.2.17.jar
-        dest: /opt/apache-atlas-2.4.0/hook-bin/log4j-1.2.17.jar
-
-    - name: Download slf4j-log4j12-1.7.30.jar
-      get_url:
-        url: https://repo1.maven.org/maven2/org/slf4j/slf4j-log4j12/1.7.30/slf4j-log4j12-1.7.30.jar
-        dest: /opt/apache-atlas-2.4.0/hook-bin/slf4j-log4j12-1.7.30.jar
-
-    - name: Copy import-hive.sh to hook-bin directory
-      copy:
-        src: files/import-hive.sh
-        dest: /opt/apache-atlas-2.4.0/hook-bin/import-hive.sh
-        owner: root
-        group: root
-        mode: '0755'
-#now the import-hive.sh feature will work ! 
-
-
-
-#################################################################
-#######################SQOOP HOOK##############################
-
-    - name: Extract apache-atlas-2.4.0-sqoop-hook.tar.gz
-      ansible.builtin.unarchive:
-        src: /home/gadet/apache-atlas-2.4.0/distro/target/apache-atlas-2.4.0-sqoop-hook.tar.gz
-        dest: /home/gadet/apache-atlas-2.4.0/distro/target/
-        remote_src: yes
-
-    - name: Create sqoop hook directory
-      file:
-        path: /opt/apache-atlas-2.4.0/hook/sqoop
-        state: directory
-        owner: root
-        group: root
-        mode: '0755'
-
-    - name: Copy sqoop hook files to the directory
-      copy:
-        src: /home/gadet/apache-atlas-2.4.0/distro/target/apache-atlas-sqoop-hook-2.4.0/hook/sqoop/
-        dest: /opt/apache-atlas-2.4.0/hook/sqoop/
-        owner: root
-        group: root
-        mode: '0755'
-        recurse: yes
-
-    - name: Update HADOOP_CLASSPATH in current shell environment
-      shell: export HADOOP_CLASSPATH=$HADOOP_CLASSPATH:/opt/apache-hive-3.1.2-bin/lib/hive-jdbc-3.1.2.jar:/opt/apache-hive-3.1.2-bin/lib/hive-service-3.1.2.jar
-      environment:
-        HADOOP_CLASSPATH: "{{ lookup('env', 'HADOOP_CLASSPATH') }}"
-
-    - name: Source .bashrc to apply changes
-      shell: source ~/.bashrc
-      args:
-        executable: /bin/bash
-
-
-    - name: Copy atlas-application.properties to Sqoop configuration
-      copy:
-        src: files/atlas-application.properties
-        dest: /opt/sqoop-1.4.7.bin__hadoop-2.6.0/conf/atlas-application.properties
-        owner: root
-        group: root
-        mode: '0644'
-
-    - name: Create symbolic links for Sqoop JAR files
-      command:
-        cmd: ln -s /opt/apache-atlas-2.4.0/hook/sqoop/*.jar /opt/sqoop-1.4.7.bin__hadoop-2.6.0/lib
-        creates: /opt/sqoop-1.4.7.bin__hadoop-2.6.0/lib/atlas-sqoop-plugin-impl.jar
-
-    - name: Update sqoop-env.sh with HADOOP_CLASSPATH entry
-      lineinfile:
-        path: /opt/sqoop-1.4.7.bin__hadoop-2.6.0/conf/sqoop-env.sh
-        line: 'export HADOOP_CLASSPATH=$HADOOP_CLASSPATH:/opt/apache-atlas-2.4.0/hook/sqoop/atlas-sqoop-plugin-impl/*::/opt/sqoop-1.4.7.bin__hadoop-2.6.0/lib/atlas-plugin-classloader-2.4.0.jar:/opt/sqoop-1.4.7.bin__hadoop-2.6.0/lib/sqoop-bridge-shim-2.4.0.jar'
-        create: yes
-
-    - name: Reload sqoop-env.sh to apply changes
-      shell: source /opt/sqoop-1.4.7.bin__hadoop-2.6.0/conf/sqoop-env.sh
-      args:
-        executable: /bin/bash
-
-    - name: Download commons-configuration JAR
-      get_url:
-        url: https://repo1.maven.org/maven2/commons-configuration/commons-configuration/1.10/commons-configuration-1.10.jar
-        dest: /opt/sqoop-1.4.7.bin__hadoop-2.6.0/lib/commons-configuration-1.10.jar
-
-    - name: Copy hive-jdbc-3.1.2.jar to Sqoop lib
-      copy:
-        src: /opt/apache-hive-3.1.2-bin/lib/hive-jdbc-3.1.2.jar
-        dest: /opt/sqoop-1.4.7.bin__hadoop-2.6.0/lib/hive-jdbc-3.1.2.jar
-        owner: root
-        group: root
-        mode: '0644'
-
-    - name: Copy hive-jdbc-handler-3.1.2.jar to Sqoop lib
-      copy:
-        src: /opt/apache-hive-3.1.2-bin/lib/hive-jdbc-handler-3.1.2.jar
-        dest: /opt/sqoop-1.4.7.bin__hadoop-2.6.0/lib/hive-jdbc-handler-3.1.2.jar
-        owner: root
-        group: root
-        mode: '0644'
-
-#now the Atlas hook is being initialized but is still encountering the same NullPointerException in the PublishJobData
-#the data is being imported by hive but the sqoop entity isnt publishing metadata to atlas so no entities are being created 
-#we had to go deeper in that in order to solve the problem ...
-
-
-    - name: Backup SqoopJsonUtil.java
-      copy:
-        src: /opt/sqoop-1.4.7.bin__hadoop-2.6.0/src/java/org/apache/sqoop/util/SqoopJsonUtil.java
-        dest: /opt/sqoop-1.4.7.bin__hadoop-2.6.0/src/java/org/apache/sqoop/util/SqoopJsonUtil.java.backup
-        owner: root
-        group: root
-        mode: '0644'
-
-    - name: Create directory structure for patched class
-      file:
-        path: /tmp/sqoop-patch/org/apache/sqoop/util/
-        state: directory
-        mode: '0755'
-
-    - name: Copy SqoopJsonUtil.java to patched directory
-      copy:
-        src: /opt/sqoop-1.4.7.bin__hadoop-2.6.0/src/java/org/apache/sqoop/util/SqoopJsonUtil.java
-        dest: /tmp/sqoop-patch/org/apache/sqoop/util/SqoopJsonUtil.java
-        owner: root
-        group: root
-        mode: '0644'
-
-    - name: Modify getJsonStringforMap method in SqoopJsonUtil.java
-      replace:
-        path: /opt/sqoop-1.4.7.bin__hadoop-2.6.0/src/java/org/apache/sqoop/util/SqoopJsonUtil.java
-        regexp: 'public static String getJsonStringforMap\(Map<String, String> map\) {.*?}'
-        replace: |
-          public static String getJsonStringforMap(Map<String, Object> map) {
-              String jsonStr = null;
-              if (map == null) {
-                map = new HashMap<String, Object>();
-              }
-              JSONObject jsonObj = new JSONObject(map);
-              jsonStr = jsonObj.toString();
-              return jsonStr;
-          }
-        backup: yes
-
-- name: Compile and patch SqoopJsonUtil class for Atlas
-  hosts: all
-  become: yes
-  tasks:
-    - name: Create directory structure for patched class
-      file:
-        path: /tmp/sqoop-patch/org/apache/sqoop/util/
-        state: directory
-        mode: '0755'
-
-    - name: Copy SqoopJsonUtil.java to patch directory
-      copy:
-        src: /opt/sqoop-1.4.7.bin__hadoop-2.6.0/src/java/org/apache/sqoop/util/SqoopJsonUtil.java
-        dest: /tmp/sqoop-patch/org/apache/sqoop/util/
-        owner: root
-        group: root
-        mode: '0644'
-
-    - name: Download JSON dependency for compilation
-      get_url:
-        url: https://repo1.maven.org/maven2/org/json/json/20210307/json-20210307.jar
-        dest: /tmp/json-20210307.jar
-
-    - name: Move JSON dependency to Sqoop lib
-      command: mv /tmp/json-20210307.jar /opt/sqoop-1.4.7.bin__hadoop-2.6.0/lib/
-
-    - name: Compile the patched class
-      command: javac -cp "/opt/sqoop-1.4.7.bin__hadoop-2.6.0/sqoop-1.4.7.jar:/opt/sqoop-1.4.7.bin__hadoop-2.6.0/lib/*" /tmp/sqoop-patch/org/apache/sqoop/util/SqoopJsonUtil.java
-
-    - name: Create JAR file from compiled class
-      command: jar cf /tmp/sqoop-atlas-patch.jar -C /tmp/sqoop-patch org/apache/sqoop/util/SqoopJsonUtil.class
-
-    - name: Copy the patched JAR to Sqoop lib directory
-      copy:
-        src: /tmp/sqoop-atlas-patch.jar
-        dest: /opt/sqoop-1.4.7.bin__hadoop-2.6.0/lib/
-        owner: root
-        group: root
-        mode: '0644'
-
-    - name: Ensure the original Sqoop JAR is in the lib directory
-      copy:
-        src: /opt/sqoop-1.4.7.bin__hadoop-2.6.0/sqoop-1.4.7.jar
-        dest: /opt/sqoop-1.4.7.bin__hadoop-2.6.0/lib/
-        owner: root
-        group: root
-        mode: '0644'
-
-
