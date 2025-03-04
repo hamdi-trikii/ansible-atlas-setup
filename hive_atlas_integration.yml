@@ -1,0 +1,101 @@
+---
+- name: Integrate Hive with Apache Atlas
+  hosts: localhost
+  vars:
+    ansible_connection: local
+    ansible_user: gadet
+    atlas_install_dir: /opt/apache-atlas-2.4.0
+    hive_install_dir: /opt/apache-hive-3.1.2-bin  
+    atlas_source_dir: /home/gadet/apache-atlas-sources-2.4.0
+
+  tasks:
+
+    - name: Set hive.security.authorization.enabled to false
+      ansible.builtin.replace:
+        path: "{{ hive_install_dir }}/conf/hive-site.xml"
+        regexp: '(<property>\s*<name>hive\.security\.authorization\.enabled</name>\s*<value>)true(</value>\s*</property>)'
+        replace: '\1false\2'
+
+
+    - name: Extract Atlas Hive hook tarball
+      ansible.builtin.unarchive:
+        src: "{{ atlas_source_dir }}/distro/target/apache-atlas-2.4.0-hive-hook.tar.gz"
+        dest: "{{ atlas_source_dir }}/distro/target/"
+        remote_src: yes
+        owner: gadet
+        group: gadet
+        mode: '0755'
+
+
+
+
+
+    - name: Create Atlas hook directory
+      ansible.builtin.file:
+        path: "{{ atlas_install_dir }}/hook"
+        state: directory
+        owner: gadet
+        group: gadet
+        mode: '0755'
+      become: yes
+      become_user: root
+
+
+    - name: Create Atlas Hive hook subdirectory
+      ansible.builtin.file:
+        path: "{{ atlas_install_dir }}/hook/hive"
+        state: directory
+        owner: gadet
+        group: gadet
+        mode: '0755'
+      become: yes
+      become_user: root
+
+    - name: Copy Hive hook files to Atlas
+      ansible.builtin.copy:
+        src: "{{ atlas_source_dir }}/distro/target/apache-atlas-hive-hook-2.4.0/hook/hive/"
+        dest: "{{ atlas_install_dir }}/hook/hive/"
+        owner: gadet
+        group: gadet
+        mode: '0755'
+      become: yes
+      become_user: root
+
+
+
+
+    - name: Add Atlas Hive hook to hive-site.xml
+      ansible.builtin.lineinfile:
+        path: "{{ hive_install_dir }}/conf/hive-site.xml"
+        line: |
+          <property>
+            <name>hive.exec.post.hooks</name>
+            <value>org.apache.atlas.hive.hook.HiveHook</value>
+          </property>
+        insertbefore: '</configuration>'
+        state: present
+
+
+
+    - name: Set HIVE_AUX_JARS_PATH in hive-env.sh
+      ansible.builtin.lineinfile:
+        path: "{{ hive_install_dir }}/conf/hive-env.sh"
+        line: "export HIVE_AUX_JARS_PATH={{ atlas_install_dir }}/hook/hive"
+        state: present
+        create: yes
+        owner: gadet
+        group: gadet
+        mode: '0755'
+
+
+
+
+    - name: Copy atlas-application.properties to Hive conf
+      ansible.builtin.copy:
+        src: "{{ atlas_install_dir }}/conf/atlas-application.properties"
+        dest: "{{ hive_install_dir }}/conf/atlas-application.properties"
+        owner: gadet
+        group: gadet
+        mode: '0644'
+
+
