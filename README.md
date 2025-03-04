@@ -30,3 +30,38 @@
 <p align="left">ansible-playbook hive_atlas_integration.yml -K -vvv</p>
 
 ###
+
+
+
+###
+###
+<h2 align="left">NOTES:</h2>
+<p align="left">zookeper permission: 
+  
+sudo chown -R gadet:gadet /var/lib/zookeeper
+  
+sudo chown -R gadet:gadet /opt/apache-zookeeper-3.7.1-bin
+
+sudo chmod -R 755 /var/lib/zookeeper
+  
+sudo chmod -R 755 /opt/apache-zookeeper-3.7.1-bin
+
+than start it :$ZOOKEEPER_HOME/bin/zkServer.sh start
+
+-------------------------------------
+
+start hbase:$HBASE_HOME/bin/start-hbase.sh
+
+-------------------------------------
+
+start kafka :$KAFKA_HOME/bin/kafka-server-start.sh $KAFKA_HOME/config/server.properties
+
+-------------------------------------
+
+start hive metastore:
+hive --service metastore &
+
+start hive server:
+hive --service hiveserver2 &
+
+</p>
