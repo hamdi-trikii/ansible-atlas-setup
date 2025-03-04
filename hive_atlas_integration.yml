@@ -99,3 +99,43 @@
         mode: '0644'
 
 
+    - name: Create Atlas hook-bin directory
+      ansible.builtin.file:
+        path: "{{ atlas_install_dir }}/hook-bin"
+        state: directory
+        owner: gadet
+        group: gadet
+        mode: '0755'
+      become: yes
+      become_user: root
+
+    - name: Download log4j JAR
+      ansible.builtin.get_url:
+        url: http://archive.apache.org/dist/logging/log4j/1.2.17/log4j-1.2.17.jar
+        dest: "{{ atlas_install_dir }}/hook-bin/log4j-1.2.17.jar"
+        owner: gadet
+        group: gadet
+        mode: '0644'
+      become: yes
+      become_user: root
+
+
+    - name: Download slf4j-log4j12 JAR
+      ansible.builtin.get_url:
+        url: https://repo1.maven.org/maven2/org/slf4j/slf4j-log4j12/1.7.30/slf4j-log4j12-1.7.30.jar
+        dest: "{{ atlas_install_dir }}/hook-bin/slf4j-log4j12-1.7.30.jar"
+        owner: gadet
+        group: gadet
+        mode: '0644'
+      become: yes
+      become_user: root
+
+    - name: Copy import-hive.sh to hook-bin
+      ansible.builtin.copy:
+        src: files/import-hive.sh
+        dest: "{{ atlas_install_dir }}/hook-bin/import-hive.sh"
+        owner: gadet
+        group: gadet
+        mode: '0755'
+      become: yes
+      become_user: root
