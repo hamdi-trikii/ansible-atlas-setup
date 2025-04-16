@@ -1,0 +1,88 @@
+---
+- name: Integrate Hive with Apache Atlas
+  hosts: localhost
+  vars:
+    ansible_connection: local
+    ansible_user: gadet
+    atlas_install_dir: /opt/apache-atlas-2.4.0
+    atlas_source_dir: /home/gadet/apache-atlas-sources-2.4.0
+    kafka_source_dir: /opt/kafka_2.11-2.2.0
+
+
+  tasks:
+    - name: Extract Kafka hook tarball
+      ansible.builtin.unarchive:
+        src: "{{ atlas_source_dir }}/distro/target/apache-atlas-2.4.0-kafka-hook.tar.gz"
+        dest: "{{ atlas_source_dir }}/distro/target/"
+        remote_src: yes
+        owner: gadet
+        group: gadet
+        mode: '0755'
+    
+    - name: Create Atlas hook directory if it doesn't exist
+      ansible.builtin.file:
+        path: "{{ atlas_install_dir }}/hook"
+        state: directory
+        owner: gadet
+        group: gadet
+        mode: '0755'
+      become: yes
+      become_user: root
+
+    - name: Copy Kafka hook to Atlas hook directory
+      ansible.builtin.copy:
+        src: "{{ atlas_source_dir }}/distro/target/apache-atlas-kafka-hook-2.4.0/hook/kafka"
+        dest: "{{ atlas_install_dir }}/hook/kafka"
+        owner: gadet
+        group: gadet
+        mode: '0755'
+        remote_src: yes
+
+    - name: Create Atlas hook-bin directory if it doesn't exist
+      ansible.builtin.file:
+        path: "{{ atlas_install_dir }}/hook-bin"
+        state: directory
+        owner: gadet
+        group: gadet
+        mode: '0755'
+      become: yes
+      become_user: root
+
+
+    - name: Copy import-kafka.sh to hook-bin
+      ansible.builtin.copy:
+        src: files/import-kafka.sh
+        dest: "{{ atlas_install_dir }}/hook-bin/import-kafka.sh"
+        owner: gadet
+        group: gadet
+        mode: '0755'
+      become: yes
+      become_user: root
+
+
+
+    - name: Ensure KAFKA_CONF_DIR is set in .bashrc
+      ansible.builtin.lineinfile:
+        path: /home/gadet/.bashrc
+        regexp: '^export KAFKA_CONF_DIR='
+        line: 'export KAFKA_CONF_DIR="/opt/kafka_2.11-2.2.0/config"'
+        state: present
+        create: yes
+
+
+    - name: Copy Kafka plugin files to Kafka libs directory
+      ansible.builtin.copy:
+        src: "{{ atlas_install_dir }}/hook/kafka/atlas-kafka-plugin-impl/"
+        dest: "{{ kafka_source_dir }}/libs/"
+        owner: gadet
+        group: gadet
+        mode: '0755'
+        remote_src: yes
+      become: yes
+      become_user: root
+
+
+
+
+
+
