@@ -72,7 +72,7 @@
 
     - name: Copy Kafka plugin files to Kafka libs directory
       ansible.builtin.copy:
-        src: "{{ atlas_install_dir }}/hook/kafka/atlas-kafka-plugin-impl/*"
+        src: "{{ atlas_install_dir }}/hook/kafka/atlas-kafka-plugin-impl/"
         dest: "{{ kafka_source_dir }}/libs/"
         owner: gadet
         group: gadet
