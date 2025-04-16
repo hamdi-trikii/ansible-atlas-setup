@@ -1,0 +1,88 @@
+---
+- name: Integrate Hive with Apache Atlas
+  hosts: localhost
+  vars:
+    ansible_connection: local
+    ansible_user: gadet
+    atlas_install_dir: /opt/apache-atlas-2.4.0
+    atlas_source_dir: /home/gadet/apache-atlas-sources-2.4.0
+    hbase_home_dir: /opt/hbase-2.5.5-hadoop3
+
+  tasks:
+    - name: Extract HBase hook tarball
+      ansible.builtin.unarchive:
+        src: "{{ atlas_source_dir }}/distro/target/apache-atlas-2.4.0-hbase-hook.tar.gz"
+        dest: "{{ atlas_source_dir }}/distro/target"
+        remote_src: yes
+        owner: gadet
+        group: gadet
+        mode: '0755'
+
+
+    - name: Create Atlas HBase hook directory
+      ansible.builtin.file:
+        path: "{{ atlas_install_dir }}/hook/hbase"
+        state: directory
+        owner: gadet
+        group: gadet
+        mode: '0755'
+      become: yes
+      become_user: root
+
+
+    - name: Copy HBase hook files to Atlas hook directory
+      ansible.builtin.copy:
+        src: "{{ atlas_source_dir }}/distro/target/apache-atlas-hbase-hook-2.4.0/hook/hbase/"
+        dest: "{{ atlas_install_dir }}/hook/hbase/"
+        owner: gadet
+        group: gadet
+        mode: '0755'
+        remote_src: yes
+      become: yes
+      become_user: root
+
+    - name: Copy HBase hook jars to HBase lib directory
+      ansible.builtin.copy:
+        src: "{{ atlas_install_dir }}/hook/hbase/"
+        dest: "{{ hbase_home_dir }}/lib/"
+        owner: gadet
+        group: gadet
+        mode: '0755'
+        remote_src: yes
+      become: yes
+      become_user: root
+
+
+    - name: Copy atlas-application.properties to hbase conf
+      ansible.builtin.copy:
+        src: "{{ atlas_install_dir }}/conf/atlas-application.properties"
+        dest: "{{ hbase_home_dir }}/conf/atlas-application.properties"
+        owner: gadet
+        group: gadet
+        mode: '0644'
+
+    - name: Set HBASE_AUX_JARS_PATH in hbase-env.sh
+      ansible.builtin.lineinfile:
+        path: "{{ hbase_home_dir }}/conf/hbase-env.sh"
+        line: 'export HBASE_AUX_JARS_PATH={{ atlas_install_dir }}/hook/hbase'
+        create: yes
+        state: present
+      become: yes
+      become_user: root
+
+
+    - name: Add Atlas Hive hook to hbase-site.xml
+      ansible.builtin.lineinfile:
+        path: "{{ hbase_home_dir }}/conf/hbase-site.xml"
+        line: |
+          <property>
+            <name>hbase.coprocessor.master.classes</name>
+            <value>org.apache.atlas.hbase.hook.HBaseAtlasCoprocessor</value>
+          </property>
+        insertbefore: '</configuration>'
+        state: present
+
+
+
+
+
