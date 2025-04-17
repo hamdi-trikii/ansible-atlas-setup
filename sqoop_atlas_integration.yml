@@ -60,6 +60,27 @@
         dest: "{{ sqoop_install_dir }}/conf/atlas-application.properties"
         remote_src: yes
 
+    - name: Add Atlas sqoop hook to sqoop-site.xml
+      ansible.builtin.lineinfile:
+        path: "{{ sqoop_install_dir }}/conf/sqoop-site.xml"
+        line: |
+          <property>
+            <name>atlas.rest.address</name>
+            <value>http://localhost:21000</value>
+          </property>
+          <property>
+            <name>sqoop.job.data.publish.class</name>
+            <value>org.apache.atlas.sqoop.hook.SqoopHook</value>
+          </property>
+
+          <property>
+          <name>atlas.cluster.name</name>
+          <value>primary</value>
+          </property>
+        insertbefore: '</configuration>'
+        state: present
+
+
     - name: Symlink all Atlas Sqoop hook JARs to Sqoop lib directory
       shell: ln -s {{ atlas_install_dir }}/hook/sqoop/*.jar {{ sqoop_install_dir }}/lib/
       args:
@@ -92,12 +113,20 @@
         dest: "{{ sqoop_install_dir }}/lib/sqoop-atlas-patch.jar"
         owner: gadet
         group: gadet
-        mode: '0755'
+        mode: '0664'
       become: yes
       become_user: root
 
 
-
+    - name: Download json-20210307.jar to Sqoop lib directory
+      get_url:
+        url: https://repo1.maven.org/maven2/org/json/json/20210307/json-20210307.jar
+        dest: "{{ sqoop_install_dir }}/lib/json-20210307.jar"
+        owner: gadet
+        group: gadet
+        mode: '0664'
+      become: yes
+      become_user: root
 
 
     - name: Copy sqoop-1.4.7.jar into lib directory
