@@ -1,0 +1,108 @@
+---
+- name: Integrate Hive with Apache Atlas
+  hosts: localhost
+  vars:
+    ansible_connection: local
+    ansible_user: gadet
+    atlas_install_dir: /opt/apache-atlas-2.4.0
+    hive_install_dir: /opt/apache-hive-3.1.2-bin  
+    atlas_source_dir: /home/gadet/apache-atlas-sources-2.4.0
+    sqoop_install_dir: /opt/sqoop-1.4.7.bin__hadoop-2.6.0
+    atlas_conf_dir: "{{ atlas_install_dir }}/conf"
+
+
+  tasks:
+    - name: Copy hive-jdbc-3.1.2.jar to Sqoop lib directory
+      copy:
+        src: "{{ hive_install_dir }}/lib/hive-jdbc-3.1.2.jar"
+        dest: "{{ sqoop_install_dir }}/lib/hive-jdbc-3.1.2.jar"
+        remote_src: yes
+
+    - name: Copy hive-jdbc-handler-3.1.2.jar to Sqoop lib directory
+      copy:
+        src: "{{ hive_install_dir }}/lib/hive-jdbc-handler-3.1.2.jar"
+        dest: "{{ sqoop_install_dir }}/lib/hive-jdbc-handler-3.1.2.jar"
+        remote_src: yes
+
+    - name: Add Hive JDBC jars to HADOOP_CLASSPATH in .bashrc
+      lineinfile:
+        path: /home/{{ ansible_user }}/.bashrc
+        line: 'export HADOOP_CLASSPATH=$HADOOP_CLASSPATH:{{ hive_install_dir }}/lib/hive-jdbc-3.1.2.jar:{{ hive_install_dir }}/lib/hive-service-3.1.2.jar'
+        insertafter: EOF
+        state: present
+
+    - name: Extract apache-atlas-2.4.0-sqoop-hook.tar.gz
+      unarchive:
+        src: "{{ atlas_source_dir }}/distro/target/apache-atlas-2.4.0-sqoop-hook.tar.gz"
+        dest: "{{ atlas_source_dir }}/distro/target"
+        remote_src: yes
+        owner: gadet
+        group: gadet
+        mode: '0755'
+
+
+    - name: Create Sqoop hook directory in Atlas
+      file:
+        path: "{{ atlas_install_dir }}/hook/sqoop"
+        state: directory
+        mode: '0755'
+
+    - name: Copy Sqoop hook files to Atlas hook directory
+      copy:
+        src: "{{ atlas_source_dir }}/distro/target/apache-atlas-sqoop-hook-2.4.0/hook/sqoop/"
+        dest: "{{ atlas_install_dir }}/hook/sqoop/"
+        remote_src: yes
+
+
+    - name: Copy atlas-application.properties to Sqoop conf directory
+      copy:
+        src: "{{ atlas_conf_dir }}/atlas-application.properties"
+        dest: "{{ sqoop_install_dir }}/conf/atlas-application.properties"
+        remote_src: yes
+
+    - name: Symlink all Atlas Sqoop hook JARs to Sqoop lib directory
+      shell: ln -s {{ atlas_install_dir }}/hook/sqoop/*.jar {{ sqoop_install_dir }}/lib/
+      args:
+        executable: /bin/bash
+
+    - name: Add Atlas Sqoop hook classpath to sqoop-env.sh
+      lineinfile:
+        path: "{{ sqoop_install_dir }}/conf/sqoop-env.sh"
+        line: 'export HADOOP_CLASSPATH=$HADOOP_CLASSPATH:{{ atlas_install_dir }}/hook/sqoop/atlas-sqoop-plugin-impl/*::{{ sqoop_install_dir }}/lib/atlas-plugin-classloader-2.4.0.jar:{{ sqoop_install_dir }}/lib/sqoop-bridge-shim-2.4.0.jar'
+        insertafter: EOF
+        state: present
+
+
+
+    - name: Download commons-configuration-1.10.jar to Sqoop lib directory
+      get_url:
+        url: https://repo1.maven.org/maven2/commons-configuration/commons-configuration/1.10/commons-configuration-1.10.jar
+        dest: "{{ sqoop_install_dir }}/lib/commons-configuration-1.10.jar"
+
+
+
+
+#now the Atlas hook is being initialized but is still encountering the same NullPointerException in the PublishJobData
+#the data is being imported by hive but the sqoop entity isnt publishing metadata to atlas so no entities are being created 
+#we had to go deeper in that in order to solve the problem ...
+
+    - name: Copy patch jar to sqoop lib
+      ansible.builtin.copy:
+        src: files/sqoop-atlas-patch.jar
+        dest: "{{ sqoop_install_dir }}/lib/sqoop-atlas-patch.jar"
+        owner: gadet
+        group: gadet
+        mode: '0755'
+      become: yes
+      become_user: root
+
+
+
+
+
+    - name: Copy sqoop-1.4.7.jar into lib directory
+      copy:
+        src: "{{ sqoop_install_dir }}/sqoop-1.4.7.jar"
+        dest: "{{ sqoop_install_dir }}/lib/sqoop-1.4.7.jar"
+        remote_src: yes
+
