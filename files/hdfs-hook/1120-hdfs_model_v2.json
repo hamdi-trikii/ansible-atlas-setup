@@ -1,0 +1,112 @@
+{
+  "enumDefs": [
+    {
+      "name": "hdfs_process_type",
+      "serviceType": "hdfs",
+      "typeVersion": "1.0",
+      "elementDefs": [
+        {
+          "ordinal": 1,
+          "value": "COPY"
+        },
+        {
+          "ordinal": 2,
+          "value": "RENAME"
+        }
+      ]
+    }
+  ],
+  "structDefs": [],
+  "classificationDefs": [],
+  "entityDefs": [
+    {
+      "name": "hdfs_path_v2",
+      "superTypes": [
+        "hdfs_path",
+        "hdfs_container",
+        "hdfs_contained"
+      ],
+      "serviceType": "hdfs",
+      "typeVersion": "1.0",
+      "attributeDefs": []
+    },
+    {
+      "name": "hdfs_path_namenode",
+      "superTypes": [
+        "hdfs_path",
+        "hdfs_container"
+      ],
+      "serviceType": "hdfs",
+      "typeVersion": "1.0",
+      "attributeDefs": []
+    },
+    {
+      "name":        "hdfs_container",
+      "superTypes": [],
+      "description": "Atlas Type representing a Container Types test desc",
+      "serviceType": "hdfs",
+      "typeVersion": "1.0",
+      "attributeDefs": []
+    },
+    {
+      "name":        "hdfs_contained",
+      "superTypes": [],
+      "description": "Atlas Type representing a Contained Types testdesc",
+      "serviceType": "hdfs",
+      "typeVersion": "1.0",
+      "attributeDefs": []
+    },
+    {
+      "name": "hdfs_process",
+      "superTypes": [
+        "Process"
+      ],
+      "serviceType": "hdfs",
+      "typeVersion": "1.0",
+      "attributeDefs": [
+        {
+          "name":         "process_type",
+          "typeName":     "hdfs_process_type",
+          "cardinality":  "SINGLE",
+          "isIndexable":  true,
+          "isOptional":   false,
+          "isUnique":     false
+        },
+        {
+          "name":         "createTime",
+          "typeName":     "date",
+          "cardinality":  "SINGLE",
+          "isIndexable":  true,
+          "isOptional":   true,
+          "isUnique":     false
+        }
+      ]
+    }
+  ],
+  "relationshipDefs": [
+    {
+      "name":                 "hdfs_container_contained",
+      "serviceType":          "hdfs",
+      "typeVersion":          "1.0",
+      "relationshipCategory": "COMPOSITION",
+      "relationshipLabel":    "__hdfs_container.contained",
+      "endDef1": {
+        "type":               "hdfs_container",
+        "name":               "contained",
+        "isContainer":        true,
+        "cardinality":        "SET",
+        "isLegacyAttribute":  true,
+        "attributeDefs": []
+      },
+      "endDef2": {
+        "type":               "hdfs_contained",
+        "name":               "container",
+        "isContainer":        false,
+        "cardinality":        "SINGLE",
+        "isLegacyAttribute":  true,
+        "attributeDefs": []
+      },
+      "propagateTags": "NONE"
+    }
+  ]
+}

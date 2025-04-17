@@ -1,0 +1,82 @@
+---
+- name: Integrate hdfs with Apache Atlas
+  hosts: localhost
+  vars:
+    ansible_connection: local
+    ansible_user: gadet
+    atlas_install_dir: /opt/apache-atlas-2.4.0
+    atlas_source_dir: /home/gadet/apache-atlas-sources-2.4.0
+    hadoop_dir: /opt/hadoop-3.3.2
+
+
+  tasks:
+    - name: Copy hdfs bridge to hadoop lib
+      ansible.builtin.copy:
+        src: files/hdfs_hook/atlas-hdfs-bridge-2.1.0.7.1.8.0-801.jar
+        dest: "{{ hadoop_dir }}/lib/atlas-hdfs-bridge-2.1.0.7.1.8.0-801.jar"
+        owner: gadet
+        group: gadet
+        mode: '0755'
+      become: yes
+      become_user: root
+
+
+    - name: Copy hdfs bridge to atlas lib
+      ansible.builtin.copy:
+        src: files/hdfs_hook/atlas-hdfs-bridge-2.1.0.7.1.8.0-801.jar
+        dest: "{{ atlas_install_dir }}/server/webapp/atlas/WEB-INF/lib/atlas-hdfs-bridge-2.1.0.7.1.8.0-801.jar"
+        owner: gadet
+        group: gadet
+        mode: '0755'
+      become: yes
+      become_user: root
+
+
+    - name: Copy hdfs extractors to atlas
+      ansible.builtin.copy:
+        src: files/hdfs_hook/extractors
+        dest: "{{ hadoop_dir }}/"
+        owner: gadet
+        group: gadet
+        mode: '0755'
+      become: yes
+      become_user: root
+
+    - name: Copy hdfs  model to atlas models
+      ansible.builtin.copy:
+        src: files/hdfs_hook/1120-hdfs_model_v2.json
+        dest: "{{ hadoop_dir }}/models/1000-Hadoop/1120-hdfs_model_v2.json"
+        owner: gadet
+        group: gadet
+        mode: '0755'
+      become: yes
+      become_user: root
+
+    - name: Register HDFS model in Atlas
+      ansible.builtin.shell: |
+        curl -u admin:admin -X POST -H "Content-Type: application/json" \
+        -d @{{ atlas_install_dir }}/models/1000-Hadoop/1120-hdfs_model_v2.json \
+        http://localhost:21000/api/atlas/v2/types/typedefs
+      args:
+        executable: /bin/bash
+
+
+    - name: Set Atlas environment variables in .bashrc
+      ansible.builtin.blockinfile:
+        path: ~/.bashrc
+        block: |
+          export ATLAS_CONF_DIR=/opt/apache-atlas-2.4.0/conf
+          export ATLAS_LOG_DIR=/opt/apache-atlas-2.4.0/logs
+          export BASEDIR=/opt/apache-atlas-2.4.0/extractors
+        create: yes
+        owner: gadet
+        group: gadet
+        mode: '0644'
+
+    - name: Source .bashrc to apply environment variables
+      ansible.builtin.shell: source ~/.bashrc
+      args:
+        executable: /bin/bash
+
+
+

@@ -1,5 +1,5 @@
 ---
-- name: Integrate Hive with Apache Atlas
+- name: Integrate sqoop with Apache Atlas
   hosts: localhost
   vars:
     ansible_connection: local

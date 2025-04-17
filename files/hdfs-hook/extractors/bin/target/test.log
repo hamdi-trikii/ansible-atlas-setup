@@ -1,0 +1,43 @@
+2025-04-10 00:57:03,584 [main] ERROR [CliContext.java:88] The configuration file hdfs.conf is not a file or it does not exist or it is not readable. Please provide absolute path.
+2025-04-10 00:57:03,626 [main] ERROR [HDFSLineageMain.java:70] Error encountered.
+org.apache.atlas.exception.AtlasBaseException: Invalid arguments. Reason: The configuration file hdfs.conf is not a file or it does not exist or it is not readable. Please provide absolute path.
+	at org.apache.atlas.hdfs.cli.HDFSLineageMain.createCliContext(HDFSLineageMain.java:140)
+	at org.apache.atlas.hdfs.cli.HDFSLineageMain.main(HDFSLineageMain.java:58)
+Caused by: org.apache.atlas.exception.AtlasBaseException: The configuration file hdfs.conf is not a file or it does not exist or it is not readable. Please provide absolute path.
+	at org.apache.atlas.hdfs.cli.CliContext.getConfigFile(CliContext.java:90)
+	at org.apache.atlas.hdfs.cli.CliContext.<init>(CliContext.java:46)
+	at org.apache.atlas.hdfs.cli.CliContext.createInstance(CliContext.java:51)
+	at org.apache.atlas.hdfs.cli.HDFSLineageMain.createCliContext(HDFSLineageMain.java:133)
+	... 1 common frames omitted
+2025-04-10 01:02:56,133 [main] ERROR [HDFSLineageContext.java:93] There is no value specified for configuration parameter atlas.jaas.KafkaClient.option.keyTab
+2025-04-10 01:02:56,180 [main] ERROR [HDFSLineageMain.java:70] Error encountered.
+org.apache.atlas.exception.AtlasBaseException: Error encountered in initializing task: There is no value specified for configuration parameter atlas.jaas.KafkaClient.option.keyTab
+	at org.apache.atlas.hdfs.cli.HDFSLineageMain.getInitializedLineageTask(HDFSLineageMain.java:92)
+	at org.apache.atlas.hdfs.cli.HDFSLineageMain.main(HDFSLineageMain.java:61)
+Caused by: org.apache.atlas.exception.AtlasBaseException: There is no value specified for configuration parameter atlas.jaas.KafkaClient.option.keyTab
+	at org.apache.atlas.hdfs.lineage.HDFSLineageContext.checkEmptinessForConfigurationParameter(HDFSLineageContext.java:95)
+	at org.apache.atlas.hdfs.lineage.HDFSLineageContext.validateAtlasClientProperties(HDFSLineageContext.java:84)
+	at org.apache.atlas.hdfs.lineage.HDFSLineageContext.initialize(HDFSLineageContext.java:61)
+	at org.apache.atlas.hdfs.lineage.HDFSLineageTask.initialize(HDFSLineageTask.java:47)
+	at org.apache.atlas.hdfs.cli.HDFSLineageMain.getInitializedLineageTask(HDFSLineageMain.java:86)
+	... 1 common frames omitted
+2025-04-10 01:20:41,482 [main] ERROR [HDFSLineageContext.java:93] There is no value specified for configuration parameter atlas.jaas.KafkaClient.option.keyTab
+2025-04-10 01:20:41,501 [main] ERROR [HDFSLineageMain.java:70] Error encountered.
+org.apache.atlas.exception.AtlasBaseException: Error encountered in initializing task: There is no value specified for configuration parameter atlas.jaas.KafkaClient.option.keyTab
+	at org.apache.atlas.hdfs.cli.HDFSLineageMain.getInitializedLineageTask(HDFSLineageMain.java:92)
+	at org.apache.atlas.hdfs.cli.HDFSLineageMain.main(HDFSLineageMain.java:61)
+Caused by: org.apache.atlas.exception.AtlasBaseException: There is no value specified for configuration parameter atlas.jaas.KafkaClient.option.keyTab
+	at org.apache.atlas.hdfs.lineage.HDFSLineageContext.checkEmptinessForConfigurationParameter(HDFSLineageContext.java:95)
+	at org.apache.atlas.hdfs.lineage.HDFSLineageContext.validateAtlasClientProperties(HDFSLineageContext.java:84)
+	at org.apache.atlas.hdfs.lineage.HDFSLineageContext.initialize(HDFSLineageContext.java:61)
+	at org.apache.atlas.hdfs.lineage.HDFSLineageTask.initialize(HDFSLineageTask.java:47)
+	at org.apache.atlas.hdfs.cli.HDFSLineageMain.getInitializedLineageTask(HDFSLineageMain.java:86)
+	... 1 common frames omitted
+2025-04-10 01:26:59,901 [main] ERROR [KafkaUtils.java:243] Unable to add JAAS configuration for client [KafkaClient] as it is missing param [KafkaClient.loginModuleName]. Skipping JAAS config for [KafkaClient]
+2025-04-10 01:28:48,985 [main] ERROR [KafkaUtils.java:243] Unable to add JAAS configuration for client [KafkaClient] as it is missing param [KafkaClient.loginModuleName]. Skipping JAAS config for [KafkaClient]
+2025-04-10 01:50:10,223 [main] ERROR [KafkaUtils.java:238] Unable to add JAAS configuration for client [KafkaClient] as it is missing param [KafkaClient.loginModuleName]. Skipping JAAS config for [KafkaClient]
+2025-04-10 01:55:58,563 [main] ERROR [KafkaUtils.java:238] Unable to add JAAS configuration for client [KafkaClient] as it is missing param [KafkaClient.loginModuleName]. Skipping JAAS config for [KafkaClient]
+2025-04-10 02:24:15,772 [main] ERROR [KafkaUtils.java:238] Unable to add JAAS configuration for client [KafkaClient] as it is missing param [KafkaClient.loginModuleName]. Skipping JAAS config for [KafkaClient]
+2025-04-10 02:30:44,098 [main] ERROR [KafkaUtils.java:238] Unable to add JAAS configuration for client [KafkaClient] as it is missing param [KafkaClient.loginModuleName]. Skipping JAAS config for [KafkaClient]
+2025-04-10 02:36:25,079 [main] ERROR [KafkaUtils.java:238] Unable to add JAAS configuration for client [KafkaClient] as it is missing param [KafkaClient.loginModuleName]. Skipping JAAS config for [KafkaClient]
+2025-04-10 19:21:17,201 [main] ERROR [KafkaUtils.java:238] Unable to add JAAS configuration for client [KafkaClient] as it is missing param [KafkaClient.loginModuleName]. Skipping JAAS config for [KafkaClient]
