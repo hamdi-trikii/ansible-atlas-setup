@@ -35,7 +35,7 @@
     - name: Copy hdfs extractors to atlas
       ansible.builtin.copy:
         src: files/hdfs_hook/extractors
-        dest: "{{ hadoop_dir }}/"
+        dest: "{{ atlas_install_dir }}/"
         owner: gadet
         group: gadet
         mode: '0755'
@@ -45,10 +45,18 @@
     - name: Copy hdfs  model to atlas models
       ansible.builtin.copy:
         src: files/hdfs_hook/1120-hdfs_model_v2.json
-        dest: "{{ hadoop_dir }}/models/1000-Hadoop/1120-hdfs_model_v2.json"
+        dest: "{{ atlas_install_dir }}/models/1000-Hadoop/1120-hdfs_model_v2.json"
         owner: gadet
         group: gadet
         mode: '0755'
+      become: yes
+      become_user: root
+
+
+    - name: Ensure curl is installed
+      ansible.builtin.package:
+        name: curl
+        state: present
       become: yes
       become_user: root
 
@@ -77,6 +85,5 @@
       ansible.builtin.shell: source ~/.bashrc
       args:
         executable: /bin/bash
-
 
 
