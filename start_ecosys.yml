@@ -1,78 +1,121 @@
 ---
-- name: Start Hadoop Ecosystem
+- name: Start Hadoop Ecosystem Services with Checks
   hosts: localhost
   vars:
-    zookeeper_data_dir: /var/lib/zookeeper
-    zookeeper_install_dir: /opt/apache-zookeeper-3.7.1-bin
-    zookeeper_bin: "{{ zookeeper_install_dir }}/bin/zkServer.sh"
-    hbase_bin: "{{ lookup('env', 'HBASE_HOME') }}/bin/start-hbase.sh"
-    kafka_bin: "{{ lookup('env', 'KAFKA_HOME') }}/bin/kafka-server-start.sh"
-    kafka_config: "{{ lookup('env', 'KAFKA_HOME') }}/config/server.properties"
+    ansible_connection: local
+    ansible_user: gadet
+    zookeeper_lib_dir: /var/lib/zookeeper
+    zookeeper_bin_dir: /opt/apache-zookeeper-3.7.1-bin
+    zookeeper_bin: "{{ zookeeper_bin_dir }}/bin/zkServer.sh"
+    kafka_home: /opt/kafka
+    kafka_bin: "{{ kafka_home }}/bin/kafka-server-start.sh"
+    kafka_config: "{{ kafka_home }}/config/server.properties"
+    hbase_home: /opt/hbase
+    hbase_bin: "{{ hbase_home }}/bin/start-hbase.sh"
     hive_cmd: hive
+    atlas_home: /opt/apache-atlas-2.4.0
+    atlas_start_script: "{{ atlas_home }}/bin/atlas_start.py"
 
   tasks:
-    - name: Fix ownership of Zookeeper data directory
-      file:
-        path: "{{ zookeeper_data_dir }}"
-        owner: gadet
-        group: gadet
-        recurse: yes
-      become: yes
 
-    - name: Fix ownership of Zookeeper install directory
-      file:
-        path: "{{ zookeeper_install_dir }}"
-        owner: gadet
-        group: gadet
-        recurse: yes
-      become: yes
+  - name: Fix ownership of Zookeeper lib directory
+    file:
+      path: "{{ zookeeper_lib_dir }}"
+      owner: gadet
+      group: gadet
+      recurse: yes
+    become: yes
 
-    - name: Fix permissions of Zookeeper data directory
-      file:
-        path: "{{ zookeeper_data_dir }}"
-        mode: '0755'
-        recurse: yes
-      become: yes
+  - name: Fix ownership of Zookeeper bin directory
+    file:
+      path: "{{ zookeeper_bin_dir }}"
+      owner: gadet
+      group: gadet
+      recurse: yes
+    become: yes
 
-    - name: Fix permissions of Zookeeper install directory
-      file:
-        path: "{{ zookeeper_install_dir }}"
-        mode: '0755'
-        recurse: yes
-      become: yes
+  - name: Fix permissions of Zookeeper lib directory
+    file:
+      path: "{{ zookeeper_lib_dir }}"
+      mode: '0755'
+      recurse: yes
+    become: yes
 
-    - name: Start Zookeeper server
-      shell: "{{ zookeeper_bin }} start"
-      become: yes
+  - name: Fix permissions of Zookeeper bin directory
+    file:
+      path: "{{ zookeeper_bin_dir }}"
+      mode: '0755'
+      recurse: yes
+    become: yes
 
-    - name: Start Hadoop (HDFS and YARN) using start-all.sh
-      shell: start-all.sh
-      become: yes
+  # Check and start Zookeeper
+  - name: Check if Zookeeper is running
+    shell: pgrep -f zkServer
+    register: zk_process
+    ignore_errors: yes
 
-    - name: Start HBase
-      shell: "{{ hbase_bin }}"
-      become: yes
+  - name: Start Zookeeper server if not running
+    shell: "{{ zookeeper_bin }} start"
+    become: yes
+    when: zk_process.rc != 0
 
-    - name: Start Kafka server (in background)
-      shell: "nohup {{ kafka_bin }} {{ kafka_config }} > /tmp/kafka.log 2>&1 &"
-      async: 0
-      poll: 0
-      become: yes
+  # Start HBase
+  - name: Check if HBase is running
+    shell: pgrep -f HRegionServer
+    register: hbase_process
+    ignore_errors: yes
 
-    - name: Start Hive Metastore (in background)
-      shell: "nohup {{ hive_cmd }} --service metastore > /tmp/hive-metastore.log 2>&1 &"
-      async: 0
-      poll: 0
-      become: yes
+  - name: Start HBase if not running
+    shell: "{{ hbase_bin }}"
+    become: yes
+    when: hbase_process.rc != 0
 
-    - name: Start HiveServer2 (in background)
-      shell: "nohup {{ hive_cmd }} --service hiveserver2 > /tmp/hive-server2.log 2>&1 &"
-      async: 0
-      poll: 0
-      become: yes
-   
+  # Check and start Kafka
+  - name: Check if Kafka server is running
+    shell: pgrep -f kafka.Kafka
+    register: kafka_process
+    ignore_errors: yes
 
+  - name: Start Kafka server if not running
+    shell: "nohup {{ kafka_bin }} {{ kafka_config }} > /tmp/kafka.log 2>&1 &"
+    async: 0
+    poll: 0
+    become: yes
+    when: kafka_process.rc != 0
 
-    - name: Start Apache Atlas
-      shell: /opt/apache-atlas-2.4.0/bin/atlas_start.py
-      become: yes
+  # Check and start Hive Metastore
+  - name: Check if Hive Metastore is running
+    shell: pgrep -f 'hive --service metastore'
+    register: hive_metastore_process
+    ignore_errors: yes
+
+  - name: Start Hive Metastore if not running
+    shell: "nohup {{ hive_cmd }} --service metastore > /tmp/hive-metastore.log 2>&1 &"
+    async: 0
+    poll: 0
+    become: yes
+    when: hive_metastore_process.rc != 0
+
+  # Check and start HiveServer2
+  - name: Check if HiveServer2 is running
+    shell: pgrep -f 'hive --service hiveserver2'
+    register: hive_hiveserver2_process
+    ignore_errors: yes
+
+  - name: Start HiveServer2 if not running
+    shell: "nohup {{ hive_cmd }} --service hiveserver2 > /tmp/hive-server2.log 2>&1 &"
+    async: 0
+    poll: 0
+    become: yes
+    when: hive_hiveserver2_process.rc != 0
+
+  # Check and start Apache Atlas
+  - name: Check if Apache Atlas is running
+    shell: pgrep -f atlas_start.py
+    register: atlas_process
+    ignore_errors: yes
+
+  - name: Start Apache Atlas if not running
+    shell: "{{ atlas_start_script }}"
+    become: yes
+    when: atlas_process.rc != 0
