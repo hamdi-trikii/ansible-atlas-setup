@@ -39,7 +39,7 @@
 
     - name: Start all Hadoop daemons (start-all.sh)
       shell: "{{ hadoop_dir }}/sbin/start-all.sh"
-      become: yes
+      become: no
 
     - name: Start HBase if not running
       shell: pgrep -fl 'HMaster' || true
