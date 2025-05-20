@@ -1,13 +1,15 @@
 ---
 - name: Start Hadoop Ecosystem and Apache Atlas
   hosts: localhost
+  
   vars:
     zookeeper_lib_dir: /var/lib/zookeeper
     zookeeper_install_dir: /opt/apache-zookeeper-3.7.1-bin
+    hadoop_dir: /opt/hadoop-3.3.2
     zookeeper_bin: /opt/apache-zookeeper-3.7.1-bin/bin/zkServer.sh
-    hbase_home: /opt/hbase
-    kafka_home: /opt/kafka
-    hive_home: /opt/hive
+    hbase_home: /opt/hbase-2.5.5-hadoop3/
+    kafka_home: /opt/kafka_2.11-2.2.0/
+    hive_home: /opt/apache-hive-3.1.2-bin/
     atlas_home: /opt/apache-atlas-2.4.0
     atlas_start_script: "{{ atlas_home }}/bin/atlas_start.py"
     ansible_user: gadet
@@ -36,7 +38,7 @@
       when: zookeeper_process.stdout == ""
 
     - name: Start all Hadoop daemons (start-all.sh)
-      shell: start-all.sh
+      shell: "{{ hadoop_dir }}/sbin/start-all.sh"
       become: yes
 
     - name: Start HBase if not running
