@@ -1,25 +1,24 @@
 ---
 - name: Start Hadoop Ecosystem and Apache Atlas
   hosts: localhost
-
   vars:
     zookeeper_lib_dir: /var/lib/zookeeper
     zookeeper_install_dir: /opt/apache-zookeeper-3.7.1-bin
     hadoop_dir: /opt/hadoop-3.3.2
-    zookeeper_bin: /opt/apache-zookeeper-3.7.1-bin/bin/zkServer.sh
-    hbase_home: /opt/hbase-2.5.5-hadoop3/
-    kafka_home: /opt/kafka_2.11-2.2.0/
-    hive_home: /opt/apache-hive-3.1.2-bin/
+    zookeeper_bin: "{{ zookeeper_install_dir }}/bin/zkServer.sh"
+    hbase_home: /opt/hbase-2.5.5-hadoop3
+    kafka_home: /opt/kafka_2.11-2.2.0
+    hive_home: /opt/apache-hive-3.1.2-bin
     atlas_home: /opt/apache-atlas-2.4.0
     atlas_start_script: "{{ atlas_home }}/bin/atlas_start.py"
     ansible_user: gadet
 
   tasks:
     - name: Fix permissions for Zookeeper directories
-      file:
+      ansible.builtin.file:
         path: "{{ item }}"
-        owner: gadet
-        group: gadet
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
         recurse: yes
         mode: "0755"
       become: yes
@@ -28,65 +27,108 @@
         - "{{ zookeeper_install_dir }}"
 
     - name: Check if Zookeeper is running
-      shell: pgrep -f 'org.apache.zookeeper.server.quorum.QuorumPeerMain' || true
-      register: zookeeper_process
-      ignore_errors: true
+      ansible.builtin.command: "{{ zookeeper_bin }} status"
+      register: zookeeper_status
+      failed_when: false
+      changed_when: false
 
     - name: Start Zookeeper
-      shell: "{{ zookeeper_bin }} start"
+      ansible.builtin.command: "{{ zookeeper_bin }} start"
       become: yes
-      when: zookeeper_process.stdout == ""
+      when: zookeeper_status.rc != 0
 
-    - name: Start all Hadoop daemons
-      shell: "{{ hadoop_dir }}/sbin/start-all.sh"
+    - name: Wait for Zookeeper stabilization
+      ansible.builtin.pause:
+        seconds: 10
+      when: zookeeper_status.rc != 0
+
+    - name: Start Hadoop daemons
+      ansible.builtin.command: "{{ hadoop_dir }}/sbin/start-all.sh"
       become: no
+      register: hadoop_start
+      changed_when: hadoop_start.rc == 0
+
+    - name: Wait for Hadoop stabilization
+      ansible.builtin.pause:
+        seconds: 15
+      when: hadoop_start.rc == 0
 
     - name: Check if HBase is running
-      shell: pgrep -f 'org.apache.hadoop.hbase.master.HMaster' || true
-      register: hbase_process
-      ignore_errors: true
+      ansible.builtin.command: "{{ hbase_home }}/bin/hbase-daemon.sh status master"
+      register: hbase_status
+      failed_when: false
+      changed_when: false
 
     - name: Start HBase
-      shell: "{{ hbase_home }}/bin/start-hbase.sh"
+      ansible.builtin.command: "{{ hbase_home }}/bin/start-hbase.sh"
       become: yes
-      when: hbase_process.stdout == ""
+      when: hbase_status.rc != 0
+
+    - name: Wait for HBase stabilization
+      ansible.builtin.pause:
+        seconds: 15
+      when: hbase_status.rc != 0
 
     - name: Check if Kafka is running
-      shell: pgrep -f 'kafka.Kafka' || true
-      register: kafka_process
-      ignore_errors: true
+      ansible.builtin.command: "{{ kafka_home }}/bin/kafka-topics.sh --list --zookeeper localhost:2181"
+      register: kafka_status
+      failed_when: false
+      changed_when: false
 
     - name: Start Kafka
-      shell: "nohup {{ kafka_home }}/bin/kafka-server-start.sh {{ kafka_home }}/config/server.properties > /tmp/kafka.log 2>&1 &"
+      ansible.builtin.shell: "nohup {{ kafka_home }}/bin/kafka-server-start.sh {{ kafka_home }}/config/server.properties > /tmp/kafka.log 2>&1 &"
       become: yes
-      when: kafka_process.stdout == ""
+      when: kafka_status.rc != 0
+
+    - name: Wait for Kafka stabilization
+      ansible.builtin.pause:
+        seconds: 10
+      when: kafka_status.rc != 0
 
     - name: Check if Hive Metastore is running
-      shell: pgrep -f 'hive.metastore.HiveMetaStore' || true
-      register: hive_metastore_process
-      ignore_errors: true
+      ansible.builtin.command: "{{ hive_home }}/bin/hive --service metastore --version"
+      register: hive_metastore_status
+      failed_when: false
+      changed_when: false
 
     - name: Start Hive Metastore
-      shell: "nohup {{ hive_home }}/bin/hive --service metastore > /tmp/hivemeta.log 2>&1 &"
+      ansible.builtin.shell: "nohup {{ hive_home }}/bin/hive --service metastore > /tmp/hivemeta.log 2>&1 &"
       become: yes
-      when: hive_metastore_process.stdout == ""
+      when: hive_metastore_status.rc != 0
+
+    - name: Wait for Hive Metastore stabilization
+      ansible.builtin.pause:
+        seconds: 10
+      when: hive_metastore_status.rc != 0
 
     - name: Check if HiveServer2 is running
-      shell: pgrep -f 'hive.service.server.HiveServer2' || true
-      register: hive_server_process
-      ignore_errors: true
+      ansible.builtin.command: "{{ hive_home }}/bin/hive --service hiveserver2 --version"
+      register: hive_server_status
+      failed_when: false
+      changed_when: false
 
     - name: Start HiveServer2
-      shell: "nohup {{ hive_home }}/bin/hive --service hiveserver2 > /tmp/hiveserver2.log 2>&1 &"
+      ansible.builtin.shell: "nohup {{ hive_home }}/bin/hive --service hiveserver2 > /tmp/hiveserver2.log 2>&1 &"
       become: yes
-      when: hive_server_process.stdout == ""
+      when: hive_server_status.rc != 0
+
+    - name: Wait for HiveServer2 stabilization
+      ansible.builtin.pause:
+        seconds: 10
+      when: hive_server_status.rc != 0
 
     - name: Check if Apache Atlas is running
-      shell: pgrep -f 'org.apache.atlas.Atlas' || true
-      register: atlas_process
-      ignore_errors: true
+      ansible.builtin.command: "{{ atlas_start_script }} --version"
+      register: atlas_status
+      failed_when: false
+      changed_when: false
 
     - name: Start Apache Atlas
-      shell: "{{ atlas_start_script }}"
+      ansible.builtin.command: "{{ atlas_start_script }}"
       become: yes
-      when: atlas_process.stdout == ""
+      when: atlas_status.rc != 0
+
+    - name: Wait for Apache Atlas stabilization
+      ansible.builtin.pause:
+        seconds: 20
+      when: atlas_status.rc != 0
