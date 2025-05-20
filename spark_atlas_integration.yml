@@ -1,0 +1,55 @@
+---
+- name: Integrate Hive with Apache Atlas
+  hosts: localhost
+  vars:
+    ansible_connection: local
+    ansible_user: gadet
+    atlas_install_dir: /opt/apache-atlas-2.4.0 
+    atlas_source_dir: /home/gadet/apache-atlas-sources-2.4.0
+    spark_home_dir: /opt/spark-3.4.1-bin-hadoop3
+
+
+  tasks:
+    - name: Copy Spark hook JARs to Spark jars directory
+      copy:
+        src: files/spark_hook/jars/
+        dest: "{{ spark_home_dir }}/jars/"
+        owner: gadet
+        group: gadet
+        mode: '0755'
+      become: yes
+
+
+    - name: Copy import-hive-expect.sh to Atlas hook-bin directory
+      copy:
+        src: files/spark_hook/import-hive-expect.sh
+        dest: "{{ atlas_install_dir }}/hook-bin/import-hive-expect.sh"
+        owner: gadet
+        group: gadet
+        mode: '0755'
+      become: yes
+
+
+    - name: Add Spark-Atlas integration settings to spark-defaults.conf
+      blockinfile:
+        path: "{{ spark_home_dir }}/conf/spark-defaults.conf"
+        block: |
+          spark.atlas.rest.address        http://localhost:21000
+          spark.atlas.client.type        rest        
+          spark.atlas.client.username        admin
+          spark.atlas.client.password        admin
+          spark.atlas.cluster.name        primary
+          spark.atlas.hook.spark.column.lineage.enabled        true
+          spark.kyuubi.plugin.lineage.dispatchers        ATLAS
+          spark.kyuubi.plugin.lineage.skip.parsing.permanent.view.enabled        true
+
+          spark.sql.queryExecutionListeners=org.apache.kyuubi.plugin.lineage.SparkOperationLineageQueryExecutionListener,AtlasSyncListener
+      create: yes
+
+
+    - name: Copy atlas-application.properties to Spark conf directory
+      copy:
+        src: "{{ atlas_install_dir }}/conf/atlas-application.properties"
+        dest: "{{ spark_home_dir }}/conf/atlas-application.properties"
+
+      
