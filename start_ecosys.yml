@@ -1,7 +1,7 @@
 ---
 - name: Start Hadoop Ecosystem and Apache Atlas
   hosts: localhost
-  
+
   vars:
     zookeeper_lib_dir: /var/lib/zookeeper
     zookeeper_install_dir: /opt/apache-zookeeper-3.7.1-bin
@@ -23,70 +23,70 @@
         recurse: yes
         mode: "0755"
       become: yes
-      with_items:
+      loop:
         - "{{ zookeeper_lib_dir }}"
         - "{{ zookeeper_install_dir }}"
 
-    - name: Start Zookeeper if not running
-      shell: pgrep -fl 'QuorumPeerMain' || true
+    - name: Check if Zookeeper is running
+      shell: pgrep -f 'org.apache.zookeeper.server.quorum.QuorumPeerMain' || true
       register: zookeeper_process
-      ignore_errors: yes
+      ignore_errors: true
 
-    - name: Run Zookeeper start script
+    - name: Start Zookeeper
       shell: "{{ zookeeper_bin }} start"
       become: yes
       when: zookeeper_process.stdout == ""
 
-    - name: Start all Hadoop daemons (start-all.sh)
+    - name: Start all Hadoop daemons
       shell: "{{ hadoop_dir }}/sbin/start-all.sh"
       become: no
 
-    - name: Start HBase if not running
-      shell: pgrep -fl 'HMaster' || true
+    - name: Check if HBase is running
+      shell: pgrep -f 'org.apache.hadoop.hbase.master.HMaster' || true
       register: hbase_process
-      ignore_errors: yes
+      ignore_errors: true
 
-    - name: Run HBase start script
+    - name: Start HBase
       shell: "{{ hbase_home }}/bin/start-hbase.sh"
       become: yes
       when: hbase_process.stdout == ""
 
-    - name: Start Kafka if not running
-      shell: pgrep -fl 'kafka.Kafka' || true
+    - name: Check if Kafka is running
+      shell: pgrep -f 'kafka.Kafka' || true
       register: kafka_process
-      ignore_errors: yes
+      ignore_errors: true
 
-    - name: Start Kafka server
-      shell: "{{ kafka_home }}/bin/kafka-server-start.sh {{ kafka_home }}/config/server.properties &"
+    - name: Start Kafka
+      shell: "nohup {{ kafka_home }}/bin/kafka-server-start.sh {{ kafka_home }}/config/server.properties > /tmp/kafka.log 2>&1 &"
       become: yes
       when: kafka_process.stdout == ""
 
-    - name: Start Hive metastore if not running
-      shell: pgrep -fl 'hive.metastore.HiveMetaStore' || true
+    - name: Check if Hive Metastore is running
+      shell: pgrep -f 'hive.metastore.HiveMetaStore' || true
       register: hive_metastore_process
-      ignore_errors: yes
+      ignore_errors: true
 
-    - name: Start Hive metastore service
-      shell: "hive --service metastore &"
+    - name: Start Hive Metastore
+      shell: "nohup {{ hive_home }}/bin/hive --service metastore > /tmp/hivemeta.log 2>&1 &"
       become: yes
       when: hive_metastore_process.stdout == ""
 
-    - name: Start HiveServer2 if not running
-      shell: pgrep -fl 'HiveServer2' || true
+    - name: Check if HiveServer2 is running
+      shell: pgrep -f 'hive.service.server.HiveServer2' || true
       register: hive_server_process
-      ignore_errors: yes
+      ignore_errors: true
 
-    - name: Start HiveServer2 service
-      shell: "hive --service hiveserver2 &"
+    - name: Start HiveServer2
+      shell: "nohup {{ hive_home }}/bin/hive --service hiveserver2 > /tmp/hiveserver2.log 2>&1 &"
       become: yes
       when: hive_server_process.stdout == ""
 
     - name: Check if Apache Atlas is running
-      shell: pgrep -fl "python.*atlas_start.py" || true
+      shell: pgrep -f 'org.apache.atlas.Atlas' || true
       register: atlas_process
-      ignore_errors: yes
+      ignore_errors: true
 
-    - name: Start Apache Atlas if not running
+    - name: Start Apache Atlas
       shell: "{{ atlas_start_script }}"
       become: yes
       when: atlas_process.stdout == ""
