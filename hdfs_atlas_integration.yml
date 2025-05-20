@@ -92,14 +92,15 @@
         path: /home/gadet/.bashrc
         marker: "# {mark} ANSIBLE_HDFS_WRAPPER"
         block: |
+
           function hdfs() {
-              echo "Function hdfs called with args: \$@"
-              if [ "\$1" = "dfs" ]; then
-                  echo "Running wrapper with: \${@:2}"
-                  /opt/hadoop-3.3.2/bin/hdfs-wrapper.sh "\${@:2}"
+              echo "Function hdfs called with args: $@"
+              if [ "$1" = "dfs" ]; then
+                  echo "Running wrapper with: ${@:2}"
+                  /opt/hadoop-3.3.2/bin/hdfs-wrapper.sh "${@:2}"
               else
-                  echo "Running original hdfs with: \$@"
-                  /opt/hadoop-3.3.2/bin/hdfs "\$@"
+                  echo "Running original hdfs with: $@"
+                  /opt/hadoop-3.3.2/bin/hdfs "$@"
               fi
           }
           export -f hdfs
