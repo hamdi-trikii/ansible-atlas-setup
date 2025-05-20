@@ -44,7 +44,7 @@
           spark.kyuubi.plugin.lineage.skip.parsing.permanent.view.enabled        true
 
           spark.sql.queryExecutionListeners=org.apache.kyuubi.plugin.lineage.SparkOperationLineageQueryExecutionListener,AtlasSyncListener
-      create: yes
+        create: yes
 
 
     - name: Copy atlas-application.properties to Spark conf directory

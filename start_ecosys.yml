@@ -1,0 +1,72 @@
+---
+- name: Start Hadoop Ecosystem
+  hosts: localhost
+  vars:
+    zookeeper_data_dir: /var/lib/zookeeper
+    zookeeper_install_dir: /opt/apache-zookeeper-3.7.1-bin
+    zookeeper_bin: "{{ zookeeper_install_dir }}/bin/zkServer.sh"
+    hbase_bin: "{{ lookup('env', 'HBASE_HOME') }}/bin/start-hbase.sh"
+    kafka_bin: "{{ lookup('env', 'KAFKA_HOME') }}/bin/kafka-server-start.sh"
+    kafka_config: "{{ lookup('env', 'KAFKA_HOME') }}/config/server.properties"
+    hive_cmd: hive
+
+  tasks:
+    - name: Fix ownership of Zookeeper data directory
+      file:
+        path: "{{ zookeeper_data_dir }}"
+        owner: gadet
+        group: gadet
+        recurse: yes
+      become: yes
+
+    - name: Fix ownership of Zookeeper install directory
+      file:
+        path: "{{ zookeeper_install_dir }}"
+        owner: gadet
+        group: gadet
+        recurse: yes
+      become: yes
+
+    - name: Fix permissions of Zookeeper data directory
+      file:
+        path: "{{ zookeeper_data_dir }}"
+        mode: '0755'
+        recurse: yes
+      become: yes
+
+    - name: Fix permissions of Zookeeper install directory
+      file:
+        path: "{{ zookeeper_install_dir }}"
+        mode: '0755'
+        recurse: yes
+      become: yes
+
+    - name: Start Zookeeper server
+      shell: "{{ zookeeper_bin }} start"
+      become: yes
+
+    - name: Start Hadoop (HDFS and YARN) using start-all.sh
+      shell: start-all.sh
+      become: yes
+
+    - name: Start HBase
+      shell: "{{ hbase_bin }}"
+      become: yes
+
+    - name: Start Kafka server (in background)
+      shell: "nohup {{ kafka_bin }} {{ kafka_config }} > /tmp/kafka.log 2>&1 &"
+      async: 0
+      poll: 0
+      become: yes
+
+    - name: Start Hive Metastore (in background)
+      shell: "nohup {{ hive_cmd }} --service metastore > /tmp/hive-metastore.log 2>&1 &"
+      async: 0
+      poll: 0
+      become: yes
+
+    - name: Start HiveServer2 (in background)
+      shell: "nohup {{ hive_cmd }} --service hiveserver2 > /tmp/hive-server2.log 2>&1 &"
+      async: 0
+      poll: 0
+      become: yes

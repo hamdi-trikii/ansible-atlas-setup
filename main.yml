@@ -1,0 +1,17 @@
+---
+- import_playbook: install_atlas.yml
+- import_playbook: kafka_atlas_integration.yml
+- import_playbook: hbase_atlas_integration.yml
+
+- import_playbook: hive_atlas_integration.yml
+- import_playbook: sqoop_atlas_integration.yml
+
+- import_playbook: spark_atlas_integration.yml
+
+
+
+#- import_playbook: hdfs_atlas_integration.yml
+
+
+
+#usage:ansible-playbook main.yml -K -vvv  pass:gadet
