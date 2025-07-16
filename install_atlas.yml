@@ -6,8 +6,15 @@
   vars:
     ansible_connection: local
     ansible_user: gadet
-    atlas_install_dir: /home/gadet/atlas
   tasks:
+  
+    - name: Ensure python3-apt is installed
+    ansible.builtin.apt:
+      name: python3-apt
+      state: present
+      update_cache: yes
+    become: yes
+
     - name: Download Apache Atlas source
       ansible.builtin.get_url:
         url: https://dlcdn.apache.org/atlas/2.4.0/apache-atlas-2.4.0-sources.tar.gz
