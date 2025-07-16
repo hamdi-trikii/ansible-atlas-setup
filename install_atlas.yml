@@ -9,11 +9,11 @@
   tasks:
   
     - name: Ensure python3-apt is installed
-    ansible.builtin.apt:
-      name: python3-apt
-      state: present
-      update_cache: yes
-    become: yes
+      ansible.builtin.apt:
+        name: python3-apt
+        state: present
+        update_cache: yes
+      become: yes
 
     - name: Download Apache Atlas source
       ansible.builtin.get_url:
